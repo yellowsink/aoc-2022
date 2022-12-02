@@ -1,6 +1,6 @@
 #!/usr/bin/env dub
 /+ dub.sdl:
-    name "d1p1"
+    name "d2p1"
 +/
 
 enum RPS
@@ -31,7 +31,6 @@ int outcome(RPS theirs, RPS ours)
 void main()
 {
   import std.stdio : write, stdin, lines;
-  import std.conv : to;
 
   int score;
 

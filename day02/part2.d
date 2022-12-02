@@ -1,6 +1,6 @@
 #!/usr/bin/env dub
 /+ dub.sdl:
-    name "d1p1"
+    name "d2p2"
 +/
 
 enum RPS
@@ -56,7 +56,6 @@ RPS respond(RPS theirs, WinLoseDraw wld)
 void main()
 {
   import std.stdio : write, stdin, lines;
-  import std.conv : to;
 
   int score;
 
