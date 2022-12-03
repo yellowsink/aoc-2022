@@ -5,12 +5,13 @@ open System.IO
 
 module String =
   let split (sep: string) (s: string) = s.Split(sep, StringSplitOptions.RemoveEmptyEntries ||| StringSplitOptions.TrimEntries)
+  let trim (s: string) = s.Trim()
 
 let input = (
     use sr = new StreamReader(Console.OpenStandardInput())
     sr.ReadToEnd()
   )
 
-let inputLn = input |> (String.split "\n")
+let inputLn = input |> String.trim |> (String.split "\n")
 let inputCh = input |> (String.split "\n\n")
 let inputChLn = inputCh |> Array.map (String.split "\n")
