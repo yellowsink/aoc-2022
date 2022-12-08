@@ -13,10 +13,10 @@ void main()
   {
     import std.string : stripRight;
 
-    int[] working = [];    
+    int[] working = [];
     foreach (c; line.stripRight)
       working ~= c - '0';
-    
+
     heights ~= working;
   }
 
@@ -26,31 +26,27 @@ void main()
     auto nextX = xIdx + xDir;
 
     // reached edge
-    if (nextX < 0 || nextY < 0 || nextX >= heights[yIdx].length || nextY >= heights.length)
+    if (nextX < 0
+      || nextY < 0
+      || nextX >= heights[yIdx].length
+      || nextY >= heights.length)
       return true;
 
     // next tree is obscuring
     if (heights[nextY][nextX] >= height)
       return false;
-    
+
     // walk!
     return check(yDir, xDir, nextY, nextX, height);
   }
 
   int visible;
   for (int y; y < heights.length; y++)
-  for (int x; x < heights[y].length; x++)
-  {
-    auto isVisible = check(1 , 0 , y, x, heights[y][x])
-          || check(-1, 0 , y, x, heights[y][x])
-          || check(0 , 1 , y, x, heights[y][x])
-          || check(0 , -1, y, x, heights[y][x]);
-    
-    //writeln(x, ", ", y, ": ", isVisible);
-    visible += isVisible;
-  }
-  
-
+    for (int x; x < heights[y].length; x++)
+      visible += check(1, 0, y, x, heights[y][x])
+        || check(-1, 0, y, x, heights[y][x])
+        || check(0, 1, y, x, heights[y][x])
+        || check(0, -1, y, x, heights[y][x]);
 
   write(visible);
 }
