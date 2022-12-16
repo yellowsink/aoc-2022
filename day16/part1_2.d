@@ -6,7 +6,7 @@
 struct Valve
 {
 	int flowRate;
-	string[] edges;
+	int[string] edges;
 	bool open;
 }
 
@@ -19,41 +19,88 @@ T2[T] copySet(T, T2)(T2[T] s)
 	return newSet;
 }
 
-string[][] cappedRoutes(int cap, Valve[string] store, string start, bool[string] treatOpen = new bool[string])
+string[][] routes(int cap, Valve[string] store, string start)
 {
 	string[][] results;
 
-	void walk(string node, int minutesUsed, string[] wipPath)
+	void walk(string node, int minutesUsed, string[] wipPath, int toOpen, bool[string] treatOpen = new bool[string])
 	{
-		bool deadEnd = true;
-		EDGES_LOOP: foreach (edge; store[node].edges)
+			import std.stdio;
+		if (toOpen == 0)
 		{
-			foreach (n; wipPath)
-				if (n == edge)
-					continue EDGES_LOOP;
+			writeln(wipPath);
+			results ~= wipPath;
+			return;
+		}
 
-			deadEnd = false;
+		foreach (edge, dist; store[node].edges)
+		{
+			auto isClosed = !(store[edge].open || edge in treatOpen);
 
-			auto thisStepMins = minutesUsed + 1 + (store[edge].flowRate != 0 && !(store[edge].open || edge in treatOpen));
+			if (isClosed)
+				treatOpen[edge] = true;
+
+			auto thisStepMins = minutesUsed + dist + (store[edge].flowRate != 0 && isClosed);
 			if (thisStepMins > cap)
 				continue;
 
-			walk(edge, thisStepMins, wipPath ~ edge);
+			walk(edge, thisStepMins, wipPath ~ edge, toOpen - isClosed, treatOpen.copySet());
 		}
-
-		if (deadEnd)
-			results ~= wipPath;
 	}
 
-	walk(start, 0, [start]);
+	int amountToOpen;
+	foreach (k, v; store)
+	if (v.flowRate > 0)
+		amountToOpen++;
+
+	walk(start, 0, [start], amountToOpen);
 
 	return results;
+}
+
+int pathFindTo(string from, string to, Valve[string] data)
+{
+	string[] current = [from];
+	bool[string] visited;
+	int steps;
+
+	while (true)
+	{
+		assert(current.length > 0);
+
+		bool found;
+		foreach (c; current)
+			if (c == to)
+			{
+				found = true;
+				break;
+			}
+		if (found)
+			break;
+
+		string[] next;
+
+		foreach (c; current)
+			foreach (e; data[c].edges.byKey)
+			{
+				if (e in visited) continue;
+				visited[e] = true;
+
+				next ~= e;
+			}
+
+		current = next;
+
+		steps++;
+	}
+
+	return steps;
 }
 
 void main()
 {
 	import std.stdio : write, writeln, stdin, lines;
-	import std.string : stripRight, startsWith, split;
+	import std.string : stripRight, startsWith, split, join;
 	import std.conv : to;
 	import std.typecons : Tuple, tuple;
 	import std.algorithm : min, max, maxElement;
@@ -66,66 +113,58 @@ void main()
 	foreach (string line; lines(stdin))
 	{
 		auto matched = matchFirst(line, regex);
+		auto edges = matched[3].stripRight.split(", ");
+		int[string] edgemap;
+
+		foreach (e; edges)
+			edgemap[e] = 1;
+
 		valves[matched[1]] = Valve(
 			matched[2].to!int,
-			matched[3].stripRight.split(", ")
+			edgemap
 		);
 	}
 
-	int bestFreed;
+	// populate distances
+	foreach (k1; valves.byKey)
+		foreach (k2; valves[k1].edges.byKey)
+			valves[k1].edges[k2] = pathFindTo(k1, k2, valves);
 
-	void walk(int minutes, int pressureFreed, int flowRate, string currentNode, bool[string] visited)
-	{
-		foreach (route; cappedRoutes(minutes, valves, currentNode))
+	// remove 0 rate nodes
+	foreach (key, value; valves)
+		if (value.flowRate == 0)
 		{
-			int pressureFreedThisRoute = pressureFreed;
-			int flowRateThisRoute = flowRate;
-			int minutesThisRoute;
-			bool[string] openThisRoute = visited.copySet();
-
-			foreach (node; route[1 .. $])
+			foreach (k2, v2; valves)
 			{
-				if (valves[node].flowRate != 0 && !(valves[node].open || node in openThisRoute))
+				if (!(k2 in value.edges))
 				{
-					openThisRoute[node] = true;
-					minutesThisRoute++;
-					pressureFreedThisRoute += flowRateThisRoute;
-					flowRateThisRoute += valves[node].flowRate;
-				}
+					foreach (edge, dist; value.edges)
+					{
+						if (edge in v2.edges)
+						{}
+						else
+							v2.edges[edge]++;
+						//else v2.edges[edge] = 1;
+					}
 
-				minutesThisRoute++;
-				pressureFreedThisRoute += flowRateThisRoute;
+					v2.edges.remove(key);
+				}
 			}
 
-			foreach (key; route)
-				openThisRoute[key] = true;
-
-			if (minutesThisRoute >= minutes)
-			{
-				while (minutes > 0)
-				{
-					minutes--;
-					pressureFreedThisRoute += flowRate;
-				}
-
-				if (pressureFreedThisRoute > bestFreed)
-				{
-					bestFreed = pressureFreedThisRoute;
-					writeln("new best: ", pressureFreedThisRoute);
-				}
-			}
-			else
-				walk(minutes - minutesThisRoute,
-					pressureFreedThisRoute,
-					flowRateThisRoute,
-					route[$ - 1],
-					openThisRoute);
+			if (key != "AA")
+				valves.remove(key);
 		}
-	}
 
-	bool[string] initialVisited;
-	initialVisited["AA"] = true;
-	walk(30, 0, 0, "AA", initialVisited);
+	// fixup edges with self
+	foreach (key, value; valves)
+		value.edges.remove(key);
 
-	writeln(bestFreed);
+	writeln(valves);
+
+	//auto paths = routes(30, valves, "AA");
+	/* foreach (p; paths)
+		//if (p.join().startsWith("AADDBBJJHHGGEECC"))
+			writeln(p); */
+	//write(paths.length);
+
 }
